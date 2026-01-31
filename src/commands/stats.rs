@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::error::CliError;
 use crate::fs_utils::{file_name_string, list_markdown_files};
-use crate::pattern::{exempt_reason, parse_filename};
+use crate::pattern::{exempt_reason, parse_filename, ParsedFilename};
 
 #[derive(Args, Debug)]
 pub struct StatsArgs {
@@ -21,6 +21,7 @@ struct StatsJson {
     exempt: usize,
     invalid: usize,
     by_repo: BTreeMap<String, usize>,
+    by_category: BTreeMap<String, usize>,
     by_type: BTreeMap<String, usize>,
     by_variant: BTreeMap<String, usize>,
 }
@@ -33,6 +34,7 @@ pub fn run(args: StatsArgs) -> Result<(), CliError> {
     let mut exempt = 0;
     let mut invalid = 0;
     let mut by_repo = BTreeMap::new();
+    let mut by_category = BTreeMap::new();
     let mut by_type = BTreeMap::new();
     let mut by_variant = BTreeMap::new();
 
@@ -52,9 +54,13 @@ pub fn run(args: StatsArgs) -> Result<(), CliError> {
             }
         };
         valid += 1;
-        *by_repo.entry(parsed.repo).or_insert(0) += 1;
-        *by_type.entry(parsed.doc_type).or_insert(0) += 1;
-        *by_variant.entry(parsed.variant).or_insert(0) += 1;
+        *by_repo.entry(parsed.repo().to_string()).or_insert(0) += 1;
+        *by_category.entry(parsed.category().to_string()).or_insert(0) += 1;
+
+        if let ParsedFilename::Feat(f) = &parsed {
+            *by_type.entry(f.doc_type.clone()).or_insert(0) += 1;
+            *by_variant.entry(f.variant.clone()).or_insert(0) += 1;
+        }
     }
 
     let total = valid + invalid + exempt;
@@ -66,6 +72,7 @@ pub fn run(args: StatsArgs) -> Result<(), CliError> {
             exempt,
             invalid,
             by_repo,
+            by_category,
             by_type,
             by_variant,
         };
@@ -83,6 +90,7 @@ pub fn run(args: StatsArgs) -> Result<(), CliError> {
     println!("{summary}\n");
 
     print_map("By repo", &by_repo);
+    print_map("By category", &by_category);
     print_map("By type", &by_type);
     print_map("By variant", &by_variant);
 
