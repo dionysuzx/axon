@@ -1,6 +1,5 @@
 use clap::Args;
 use dialoguer::{Confirm, Input};
-use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
 
@@ -8,7 +7,8 @@ use crate::error::CliError;
 use crate::fs_utils::{file_name_string, list_markdown_files};
 use crate::pattern::{canonical_pattern_short, exempt_reason, is_valid_filename};
 use crate::refactor::{
-    build_rename_plans, read_journal, write_journal, RefactorPattern, RenamePlan,
+    build_rename_plans, check_existing_target_paths, check_for_duplicate_targets,
+    placeholder_mismatch_message, read_journal, write_journal, RefactorPattern, RenamePlan,
 };
 
 const RETRY_FILE: &str = ".axon-retry.json";
@@ -159,7 +159,7 @@ pub fn run(args: RefactorArgs) -> Result<(), CliError> {
     println!("\nPreview:\n");
     print_preview(&renames, Some(3));
 
-    if let Err(err) = check_for_duplicates_in_plans(&renames) {
+    if let Err(err) = check_for_duplicate_targets(&renames) {
         return Err(CliError::new(3, err));
     }
 
@@ -295,61 +295,6 @@ fn print_preview(renames: &[RenamePlan], limit: Option<usize>) {
     }
 }
 
-fn check_for_duplicates_in_plans(renames: &[RenamePlan]) -> Result<(), String> {
-    let mut targets: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for rename in renames {
-        targets
-            .entry(rename.to.clone())
-            .or_default()
-            .push(rename.from.clone());
-    }
-
-    let mut conflicts = Vec::new();
-    for (target, sources) in targets {
-        if sources.len() > 1 {
-            conflicts.push((target, sources));
-        }
-    }
-
-    if conflicts.is_empty() {
-        return Ok(());
-    }
-
-    let mut message = String::from("Error: Target pattern would create duplicate filenames\n\nConflicts:\n");
-    for (target, sources) in conflicts {
-        message.push_str(&format!("  {target} would be created by:\n"));
-        for source in sources {
-            message.push_str(&format!("    - {source}\n"));
-        }
-        message.push('\n');
-    }
-    message.push_str("Aborting. No files were renamed.");
-    Err(message)
-}
-
-fn check_existing_target_paths(renames: &[RenamePlan]) -> Result<(), String> {
-    let mut conflicts = Vec::new();
-    for rename in renames {
-        if rename.from == rename.to {
-            continue;
-        }
-        if Path::new(&rename.to).exists() {
-            conflicts.push((rename.from.clone(), rename.to.clone()));
-        }
-    }
-
-    if conflicts.is_empty() {
-        return Ok(());
-    }
-
-    let mut message = String::from("Error: Target filename already exists\n\n");
-    for (from, to) in conflicts {
-        message.push_str(&format!("  {to} already exists\n  (source: {from})\n\n"));
-    }
-    message.push_str("Use --force to overwrite existing files (dangerous).\nAborting. No files were renamed.");
-    Err(message)
-}
-
 fn execute_and_report(
     renames: &[RenamePlan],
     method: RenameMethod,
@@ -464,53 +409,4 @@ fn is_git_repo() -> bool {
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
     stdout.trim() == "true"
-}
-
-fn placeholder_mismatch_message(
-    source: &RefactorPattern,
-    target: &RefactorPattern,
-) -> String {
-    let source_list = source
-        .placeholders
-        .iter()
-        .map(|p| format!("{{{}}}", p.name()))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let target_list = target
-        .placeholders
-        .iter()
-        .map(|p| format!("{{{}}}", p.name()))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    let mut missing_in_target = Vec::new();
-    let mut missing_in_source = Vec::new();
-    for placeholder in &source.placeholders {
-        if !target.placeholders.contains(placeholder) {
-            missing_in_target.push(format!("{{{}}}", placeholder.name()));
-        }
-    }
-    for placeholder in &target.placeholders {
-        if !source.placeholders.contains(placeholder) {
-            missing_in_source.push(format!("{{{}}}", placeholder.name()));
-        }
-    }
-
-    let mut message = String::from("Error: Placeholder mismatch between patterns\n");
-    message.push_str(&format!("  - Source has: {source_list}\n"));
-    message.push_str(&format!("  - Target has: {target_list}\n"));
-    if !missing_in_target.is_empty() {
-        message.push_str(&format!(
-            "  - Missing in target: {}\n",
-            missing_in_target.join(", ")
-        ));
-    }
-    if !missing_in_source.is_empty() {
-        message.push_str(&format!(
-            "  - Missing in source: {}\n",
-            missing_in_source.join(", ")
-        ));
-    }
-    message.push_str("\nBoth patterns must use the same placeholders.");
-    message
 }

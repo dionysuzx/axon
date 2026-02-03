@@ -1,7 +1,9 @@
 use axon::refactor::{
-    check_existing_targets, check_for_duplicates, match_files, parse_refactor_pattern,
-    refactor_filename, validate_placeholder_match,
+    check_existing_target_paths, check_existing_targets, check_for_duplicate_targets,
+    check_for_duplicates, match_files, parse_refactor_pattern, refactor_filename,
+    validate_placeholder_match, RenamePlan,
 };
+use tempfile::TempDir;
 
 #[test]
 fn test_refactor_pattern() {
@@ -123,6 +125,39 @@ fn test_target_exists() {
     let existing = vec!["a.specs.b.c.v1.md"];
     let renames = vec![("a.b.specs.c.v1.md", "a.specs.b.c.v1.md")];
     let result = check_existing_targets(&renames, &existing);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("already exists"));
+}
+
+#[test]
+fn test_duplicate_targets_in_rename_plan() {
+    let renames = vec![
+        RenamePlan {
+            from: "a.b.c.v1.md".to_string(),
+            to: "a.c.b.v1.md".to_string(),
+        },
+        RenamePlan {
+            from: "a.b.d.v1.md".to_string(),
+            to: "a.c.b.v1.md".to_string(),
+        },
+    ];
+    let result = check_for_duplicate_targets(&renames);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.contains("a.c.b.v1.md"));
+    assert!(err.contains("would be created by"));
+}
+
+#[test]
+fn test_existing_target_path_conflict() {
+    let tmp = TempDir::new().unwrap();
+    let target = tmp.path().join("exists.md");
+    std::fs::write(&target, "data").unwrap();
+    let renames = vec![RenamePlan {
+        from: tmp.path().join("source.md").to_string_lossy().to_string(),
+        to: target.to_string_lossy().to_string(),
+    }];
+    let result = check_existing_target_paths(&renames);
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("already exists"));
 }

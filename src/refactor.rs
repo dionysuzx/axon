@@ -117,9 +117,18 @@ pub fn validate_placeholder_match(source: &str, target: &str) -> Result<(), Stri
     if source_pattern.placeholders == target_pattern.placeholders {
         return Ok(());
     }
+    Err(placeholder_mismatch_message(
+        &source_pattern,
+        &target_pattern,
+    ))
+}
 
-    let source_set = &source_pattern.placeholders;
-    let target_set = &target_pattern.placeholders;
+pub fn placeholder_mismatch_message(
+    source: &RefactorPattern,
+    target: &RefactorPattern,
+) -> String {
+    let source_set = &source.placeholders;
+    let target_set = &target.placeholders;
 
     let mut missing_in_target = Vec::new();
     let mut missing_in_source = Vec::new();
@@ -162,7 +171,7 @@ pub fn validate_placeholder_match(source: &str, target: &str) -> Result<(), Stri
         ));
     }
     message.push_str("\nBoth patterns must use the same placeholders.");
-    Err(message)
+    message
 }
 
 #[derive(Debug)]
@@ -322,6 +331,38 @@ pub fn check_for_duplicates(
     Err(message)
 }
 
+pub fn check_for_duplicate_targets(renames: &[RenamePlan]) -> Result<(), String> {
+    let mut targets: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for rename in renames {
+        targets
+            .entry(rename.to.clone())
+            .or_default()
+            .push(rename.from.clone());
+    }
+
+    let mut conflicts = Vec::new();
+    for (target, sources) in targets {
+        if sources.len() > 1 {
+            conflicts.push((target, sources));
+        }
+    }
+
+    if conflicts.is_empty() {
+        return Ok(());
+    }
+
+    let mut message = String::from("Error: Target pattern would create duplicate filenames\n\nConflicts:\n");
+    for (target, sources) in conflicts {
+        message.push_str(&format!("  {target} would be created by:\n"));
+        for source in sources {
+            message.push_str(&format!("    - {source}\n"));
+        }
+        message.push('\n');
+    }
+    message.push_str("Aborting. No files were renamed.");
+    Err(message)
+}
+
 pub fn check_existing_targets(
     renames: &[(&str, &str)],
     existing: &[&str],
@@ -335,6 +376,29 @@ pub fn check_existing_targets(
         }
         if existing_set.contains(*to) {
             conflicts.push((from.to_string(), to.to_string()));
+        }
+    }
+
+    if conflicts.is_empty() {
+        return Ok(());
+    }
+
+    let mut message = String::from("Error: Target filename already exists\n\n");
+    for (from, to) in conflicts {
+        message.push_str(&format!("  {to} already exists\n  (source: {from})\n\n"));
+    }
+    message.push_str("Use --force to overwrite existing files (dangerous).\nAborting. No files were renamed.");
+    Err(message)
+}
+
+pub fn check_existing_target_paths(renames: &[RenamePlan]) -> Result<(), String> {
+    let mut conflicts = Vec::new();
+    for rename in renames {
+        if rename.from == rename.to {
+            continue;
+        }
+        if Path::new(&rename.to).exists() {
+            conflicts.push((rename.from.clone(), rename.to.clone()));
         }
     }
 
