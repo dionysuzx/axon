@@ -6,7 +6,7 @@ use axon::commands;
 #[command(name = "axon", version, about = "Validate and refactor prompt filenames")]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
@@ -17,17 +17,24 @@ enum Commands {
     Refactor(commands::refactor::RefactorArgs),
     List(commands::list::ListArgs),
     Stats(commands::stats::StatsArgs),
+    /// Open today's daily note, then exit
+    D,
 }
 
 fn main() {
     let cli = Cli::parse();
     let result = match cli.command {
-        Commands::Health(args) => commands::health::run(args),
-        Commands::Validate(args) => commands::validate::run(args),
-        Commands::Parse(args) => commands::parse::run(args),
-        Commands::Refactor(args) => commands::refactor::run(args),
-        Commands::List(args) => commands::list::run(args),
-        Commands::Stats(args) => commands::stats::run(args),
+        Some(Commands::Health(args)) => commands::health::run(args),
+        Some(Commands::Validate(args)) => commands::validate::run(args),
+        Some(Commands::Parse(args)) => commands::parse::run(args),
+        Some(Commands::Refactor(args)) => commands::refactor::run(args),
+        Some(Commands::List(args)) => commands::list::run(args),
+        Some(Commands::Stats(args)) => commands::stats::run(args),
+        Some(Commands::D) => axon::notes::open_daily().map_err(|e| axon::error::CliError {
+            code: 1,
+            message: format!("daily note error: {e}"),
+        }),
+        None => axon::tui::run(),
     };
 
     if let Err(err) = result {
