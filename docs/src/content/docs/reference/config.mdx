@@ -1,0 +1,52 @@
+---
+title: Configuration
+description: axon.toml format and options
+---
+
+Axon uses an optional `axon.toml` configuration file located in the notes directory.
+
+## File Location
+
+The config file is loaded from `axon.toml` inside the notes directory:
+
+- `$AXON_NOTES_DIR/axon.toml` (if `$AXON_NOTES_DIR` is set)
+- `$HOME/notes/axon.toml` (default)
+
+If the file does not exist, axon uses default settings. If the file exists but is invalid TOML, defaults are used silently.
+
+## Format
+
+```toml
+[schemas]
+"daily.*.md" = "templates/daily.md"
+"daily.2025.01.*.md" = "templates/january.md"
+```
+
+## Schemas Table
+
+The `[schemas]` table maps glob patterns to template file paths. When axon creates a new note (daily, weekly, monthly, or scratch), it checks each pattern against the filename. The first matching pattern's template is used as the initial file content.
+
+### Glob Matching
+
+Patterns support `*` as a wildcard that matches any sequence of characters:
+
+| Pattern | Matches | Doesn't Match |
+|---------|---------|---------------|
+| `daily.*.md` | `daily.2025.01.15.md` | `notes.md` |
+| `daily.2025.01.*.md` | `daily.2025.01.15.md` | `daily.2025.02.01.md` |
+| `*.md` | Any `.md` file | `file.txt` |
+
+Patterns without `*` require an exact match.
+
+### Template Paths
+
+Template paths are relative to the notes directory. For example, with `$AXON_NOTES_DIR` set to `/home/user/notes`:
+
+```toml
+[schemas]
+"daily.*.md" = "templates/daily.md"
+```
+
+This reads the template from `/home/user/notes/templates/daily.md`.
+
+If the template file does not exist, the daily note is created empty (no error is raised).

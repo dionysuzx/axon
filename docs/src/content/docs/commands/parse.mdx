@@ -1,0 +1,100 @@
+---
+title: axon parse
+description: Parse a filename into its structured components
+---
+
+Breaks a valid filename into its component segments (repo, category, feature, type, variant, version).
+
+## Usage
+
+```bash
+axon parse <filename> [--json]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output as JSON instead of key-value pairs |
+
+## Examples
+
+### Feat filename
+
+```bash
+axon parse myapp.feat.auth.prompt.initial.v1.md
+```
+
+```
+repo:     myapp
+category: feat
+feature:  auth
+type:     prompt
+variant:  initial
+version:  v1
+```
+
+### Feat filename with `--json`
+
+```bash
+axon parse myapp.feat.auth.prompt.initial.v1.md --json
+```
+
+```json
+{
+  "category": "feat",
+  "repo": "myapp",
+  "feature": "auth",
+  "type": "prompt",
+  "variant": "initial",
+  "version": 1
+}
+```
+
+### SOP filename
+
+```bash
+axon parse myapp.sop.deploy-checklist.v1.md
+```
+
+```
+repo:     myapp
+category: sop
+name:     deploy-checklist
+version:  v1
+```
+
+### SOP filename with `--json`
+
+```bash
+axon parse myapp.sop.deploy-checklist.v1.md --json
+```
+
+```json
+{
+  "category": "sop",
+  "repo": "myapp",
+  "name": "deploy-checklist",
+  "version": 1
+}
+```
+
+### Exempt files
+
+Exempt files cannot be parsed:
+
+```bash
+axon parse README.md
+```
+
+```
+Invalid: exempt files do not follow the pattern
+```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Successfully parsed |
+| `1` | Invalid or exempt filename |
+| `2` | Serialization error |

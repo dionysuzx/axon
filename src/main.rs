@@ -15,9 +15,8 @@ enum Commands {
     Validate(commands::validate::ValidateArgs),
     Parse(commands::parse::ParseArgs),
     Refactor(commands::refactor::RefactorArgs),
-    List(commands::list::ListArgs),
-    Stats(commands::stats::StatsArgs),
-    /// Open today's daily note, then exit
+Stats(commands::stats::StatsArgs),
+    /// Open today's daily notes directory in yazi
     D,
 }
 
@@ -28,7 +27,6 @@ fn main() {
         Some(Commands::Validate(args)) => commands::validate::run(args),
         Some(Commands::Parse(args)) => commands::parse::run(args),
         Some(Commands::Refactor(args)) => commands::refactor::run(args),
-        Some(Commands::List(args)) => commands::list::run(args),
         Some(Commands::Stats(args)) => commands::stats::run(args),
         Some(Commands::D) => axon::notes::open_daily().map_err(|e| axon::error::CliError {
             code: 1,

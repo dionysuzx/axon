@@ -1,0 +1,66 @@
+---
+title: axon d
+description: Open today's daily note
+---
+
+Creates (if needed) and opens today's daily note in yazi.
+
+## Usage
+
+```bash
+axon d
+```
+
+## Filename Format
+
+Daily notes use the format:
+
+```
+daily.YYYY.MM.DD.md
+```
+
+For example, a note created on January 15, 2025 would be named `daily.2025.01.15.md`.
+
+## Notes Directory
+
+The notes directory is resolved in this order:
+
+1. `$AXON_NOTES_DIR` environment variable (if set)
+2. `$HOME/notes` (default)
+
+If the directory does not exist, axon creates it automatically.
+
+## Schema Templates
+
+When creating a new daily note, axon checks `axon.toml` in the notes directory for a matching schema template. If a glob pattern in the `[schemas]` table matches the filename, the referenced template file is used as the initial content.
+
+Example `axon.toml`:
+
+```toml
+[schemas]
+"daily.*.md" = "templates/daily.md"
+```
+
+With a template at `templates/daily.md` (relative to the notes directory):
+
+```markdown
+# Daily Note
+
+## Tasks
+- [ ]
+
+## Notes
+
+## End of Day
+```
+
+When axon creates `daily.2025.01.15.md`, it populates it with the template content. If no schema matches or the template file is missing, the note is created empty.
+
+See [Configuration](/reference/config/) for more details on `axon.toml`.
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Error creating or opening the note |

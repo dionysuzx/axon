@@ -1,0 +1,63 @@
+---
+title: Naming Convention
+description: Feat and SOP filename patterns, segment rules, and exempt files
+---
+
+Axon enforces two filename patterns for prompt files: **feat** (feature) and **sop** (standard operating procedure).
+
+## Feat Pattern
+
+```
+{repo}.feat.{feature}.{type}.{variant}.v{N}.md
+```
+
+| Segment | Rules | Example |
+|---------|-------|---------|
+| `{repo}` | Lowercase alphanumeric, may contain hyphens. Must start with a letter. | `myapp` |
+| `feat` | Literal — always `feat` | `feat` |
+| `{feature}` | Lowercase alphanumeric with hyphens. Must start with a letter. | `auth` |
+| `{type}` | Lowercase alphanumeric with hyphens. Must start with a letter. | `prompt` |
+| `{variant}` | Lowercase alphanumeric with hyphens. Must start with a letter. | `initial` |
+| `v{N}` | Version number. Positive integer (no leading zeros). | `v1`, `v12` |
+| `.md` | File extension — always `.md` | `.md` |
+
+**Example:** `myapp.feat.auth.prompt.initial.v1.md`
+
+## SOP Pattern
+
+```
+{repo}.sop.{name}.v{N}.md
+```
+
+| Segment | Rules | Example |
+|---------|-------|---------|
+| `{repo}` | Same rules as feat | `myapp` |
+| `sop` | Literal — always `sop` | `sop` |
+| `{name}` | Lowercase alphanumeric with hyphens. Must start with a letter. | `deploy-checklist` |
+| `v{N}` | Version number. Positive integer (no leading zeros). | `v1` |
+| `.md` | File extension — always `.md` | `.md` |
+
+**Example:** `myapp.sop.deploy-checklist.v1.md`
+
+## Segment Rules
+
+All named segments (`{repo}`, `{feature}`, `{type}`, `{variant}`, `{name}`) follow the same format:
+
+- Must start with a lowercase letter (`a-z`)
+- May contain lowercase letters, digits (`0-9`), and hyphens (`-`)
+- Regex: `[a-z][a-z0-9-]*`
+
+Version numbers (`{N}`) must be positive integers starting from 1 (no leading zeros). Regex: `[1-9]\d*`
+
+## Exempt Files
+
+Certain files are recognized and skipped during validation:
+
+| File | Reason |
+|------|--------|
+| `README.md` | documentation |
+| `prompts.md` | documentation |
+| `.gitignore` | system |
+| `.DS_Store` | system |
+
+Exempt files are reported separately in `axon health` output. Use `--strict` to treat them as errors.

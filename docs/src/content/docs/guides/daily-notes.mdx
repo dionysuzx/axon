@@ -1,0 +1,119 @@
+---
+title: Notes
+description: Set up and use notes with axon
+---
+
+Axon can create and open timestamped notes. This guide covers setup and usage for daily, weekly, monthly, and scratch notes.
+
+## Prerequisites
+
+- [yazi](https://yazi-rs.github.io/) — terminal file manager, used to open notes
+- [fzf](https://github.com/junegunn/fzf) — fuzzy finder, used by TUI search
+
+## Setup
+
+### 1. Set Your Notes Directory
+
+By default, notes are stored in `$HOME/notes`. To use a different directory, set the `AXON_NOTES_DIR` environment variable:
+
+```bash
+# In your shell profile (.bashrc, .zshrc, config.fish, etc.)
+export AXON_NOTES_DIR="$HOME/documents/notes"
+```
+
+### 2. Create Templates (Optional)
+
+Create template files in your notes directory:
+
+```bash
+mkdir -p "$AXON_NOTES_DIR/templates"
+```
+
+Example daily template (`$AXON_NOTES_DIR/templates/daily.md`):
+
+```markdown
+# Daily Note
+
+## Tasks
+- [ ]
+
+## Notes
+
+## End of Day
+```
+
+### 3. Configure axon.toml
+
+Create `axon.toml` in your notes directory to link templates to note types:
+
+```toml
+[schemas]
+"daily.*.md" = "templates/daily.md"
+"weekly.*.md" = "templates/weekly.md"
+"monthly.*.md" = "templates/monthly.md"
+```
+
+Now every new note matching a pattern will be pre-populated with its template.
+
+## Note Types
+
+| Type | Filename Format | Example |
+|------|----------------|---------|
+| Daily | `daily.YYYY.MM.DD.md` | `daily.2025.01.15.md` |
+| Weekly | `weekly.YYYY.MM.DD.md` (Monday's date) | `weekly.2025.01.13.md` |
+| Monthly | `monthly.YYYY.MM.md` | `monthly.2025.01.md` |
+| Scratch | `scratch.{unix_timestamp}.md` | `scratch.1737000000.md` |
+
+## Usage
+
+### From the Command Line
+
+```bash
+axon d
+```
+
+This creates `daily.YYYY.MM.DD.md` (if it doesn't exist) and opens it in yazi.
+
+### From the TUI
+
+Run `axon` to enter the TUI, then use the shortcut keys:
+
+| Key | Note Type |
+|-----|-----------|
+| `d` | Daily |
+| `w` | Weekly |
+| `m` | Monthly |
+| `s` | Scratch |
+
+The TUI suspends while yazi is open and resumes when you close it.
+
+You can also browse all notes with `j`/`k` navigation, open one with `Enter`, or fuzzy search with `/`.
+
+## How It Works
+
+1. Axon resolves the notes directory (`$AXON_NOTES_DIR` or `$HOME/notes`)
+2. Generates the filename based on the note type and current date/time
+3. If the file doesn't exist:
+   - Creates the notes directory (if needed)
+   - Loads `axon.toml` and checks `[schemas]` for a matching glob pattern
+   - If a match is found, reads the template file and writes it as the initial content
+   - If no match (or template is missing), creates an empty file
+4. Opens the file in yazi
+
+## Multiple Templates
+
+You can use different templates for different periods:
+
+```toml
+[schemas]
+"daily.2025.01.*.md" = "templates/january.md"
+"daily.*.md" = "templates/daily.md"
+```
+
+The first matching pattern wins, so put more specific patterns first.
+
+## Tips
+
+- Keep templates minimal — they should be starting points, not rigid structures
+- Notes are never validated by `axon health` (they don't follow the feat/SOP pattern)
+- Use scratch notes for quick capture — each one gets a unique timestamp

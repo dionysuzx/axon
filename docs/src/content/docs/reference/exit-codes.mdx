@@ -1,0 +1,74 @@
+---
+title: Exit Codes
+description: Exit code reference for all axon commands
+---
+
+Axon uses exit codes to indicate the result of each command. These are useful for scripting and CI integration.
+
+## Exit Code Table
+
+| Code | Name | Description |
+|------|------|-------------|
+| `0` | Success | Command completed without errors |
+| `1` | Validation failure | Invalid filename, no matching files, or health check failed |
+| `2` | Bad arguments | Invalid pattern syntax, serialization error, or invalid CLI arguments |
+| `3` | Conflict | Duplicate target filenames or target file already exists |
+| `4` | Partial failure | Some renames succeeded, others failed (refactor only) |
+| `5` | Filesystem/git error | File I/O error, git error, or terminal error |
+
+## By Command
+
+### `axon health`
+
+| Code | When |
+|------|------|
+| `0` | All files valid |
+| `1` | One or more invalid files |
+| `2` | Filesystem error |
+
+### `axon validate`
+
+| Code | When |
+|------|------|
+| `0` | Valid or exempt filename |
+| `1` | Invalid filename |
+
+### `axon parse`
+
+| Code | When |
+|------|------|
+| `0` | Successfully parsed |
+| `1` | Invalid or exempt filename |
+| `2` | Serialization error |
+
+### `axon refactor`
+
+| Code | When |
+|------|------|
+| `0` | All renames successful |
+| `1` | No matching files |
+| `2` | Invalid pattern or placeholder mismatch |
+| `3` | Duplicate or conflicting targets |
+| `4` | Partial failure — see `.axon-retry.json` and `.axon-rollback.json` |
+| `5` | Filesystem or git error |
+
+### `axon stats`
+
+| Code | When |
+|------|------|
+| `0` | Success |
+| `2` | Filesystem error |
+
+### `axon d`
+
+| Code | When |
+|------|------|
+| `0` | Success |
+| `1` | Error creating or opening the note |
+
+### `axon` (TUI)
+
+| Code | When |
+|------|------|
+| `0` | Normal exit |
+| `1` | Terminal error |

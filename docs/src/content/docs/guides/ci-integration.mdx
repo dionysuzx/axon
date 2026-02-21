@@ -1,0 +1,95 @@
+---
+title: CI Integration
+description: Using axon health in continuous integration pipelines
+---
+
+Use `axon health` in CI to enforce naming conventions on every push or pull request.
+
+## GitHub Actions
+
+```yaml
+name: Prompt Validation
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install axon
+        run: cargo install --path .
+
+      - name: Validate prompt filenames
+        run: axon health --json --strict
+```
+
+### Strict Mode
+
+The `--strict` flag treats exempt files (like `README.md`) as errors. This is useful in CI when you want to ensure every file in the directory follows the naming convention.
+
+### JSON Output
+
+The `--json` flag produces machine-readable output that can be parsed by downstream tools:
+
+```json
+{
+  "checked": 12,
+  "valid": 12,
+  "invalid": 0,
+  "exempt": 0,
+  "strict": true,
+  "invalid_files": [],
+  "exempt_files": []
+}
+```
+
+### Exit Codes
+
+`axon health` exits with code `0` on success and `1` if any files are invalid. CI runners treat non-zero exit codes as failures, so no additional scripting is needed.
+
+## GitLab CI
+
+```yaml
+validate-prompts:
+  image: rust:latest
+  script:
+    - cargo install --path .
+    - axon health --json --strict
+```
+
+## Generic CI Script
+
+For any CI system:
+
+```bash
+#!/bin/bash
+set -e
+
+cargo install --path .
+axon health --strict
+
+echo "All prompt filenames are valid."
+```
+
+## Combining with Other Checks
+
+You can run additional axon commands in CI:
+
+```yaml
+- name: Validate filenames
+  run: axon health --strict
+
+- name: Show stats
+  run: axon stats --json
+```
+
+## Tips
+
+- Use `--strict` in CI to catch stray files that wouldn't normally be flagged
+- Use `--json` when you need to parse results programmatically
+- Use `--quiet` if you only want to see failing files in the CI log
+- Consider running `axon health` as a pre-commit hook for faster feedback

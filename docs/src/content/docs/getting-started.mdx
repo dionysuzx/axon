@@ -1,0 +1,81 @@
+---
+title: Getting Started
+description: Install Axon and run your first commands
+---
+
+## Installation
+
+Clone the repository and install with Cargo:
+
+```bash
+git clone https://github.com/anthropics/axon.git
+cd axon
+cargo install --path .
+```
+
+Verify the installation:
+
+```bash
+axon --version
+```
+
+## First Steps
+
+### Check your prompt directory health
+
+Navigate to a directory containing prompt files and run:
+
+```bash
+axon health
+```
+
+```
+Checking 12 markdown files...
+
+Valid: 10 files
+Invalid: 1 files
+Exempt: 1 files
+
+Invalid files:
+  - bad-name.md (error: does not match pattern {repo}.feat.{feature}.{type}.{variant}.v{N}.md)
+
+Exempt files:
+  - README.md (exempt: documentation)
+
+Health: FAIL
+```
+
+### Parse a filename
+
+```bash
+axon parse myapp.feat.auth.prompt.initial.v1.md
+```
+
+```
+repo:     myapp
+category: feat
+feature:  auth
+type:     prompt
+variant:  initial
+version:  v1
+```
+
+### Validate a single file
+
+```bash
+axon validate myapp.feat.auth.prompt.initial.v1.md
+```
+
+```
+Valid
+```
+
+### Launch the TUI
+
+Run `axon` with no arguments to open the terminal UI:
+
+```bash
+axon
+```
+
+Browse your notes with `j`/`k`, press `Enter` to open one in yazi, or use `/` to fuzzy search. Shortcut keys: `d` daily, `w` weekly, `m` monthly, `s` scratch, `q` quit.

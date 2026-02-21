@@ -1,0 +1,105 @@
+---
+title: axon health
+description: Check that all prompt filenames in the current directory follow the naming convention
+---
+
+Scans all markdown files in the current directory and reports which follow the naming convention, which are exempt, and which are invalid.
+
+## Usage
+
+```bash
+axon health [--strict] [--json] [--quiet]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--strict` | Treat exempt files (e.g. `README.md`) as errors |
+| `--json` | Output results as JSON |
+| `--quiet` | Only output errors (invalid/exempt files) |
+
+## Output
+
+### Default
+
+```
+Checking 12 markdown files...
+
+Valid: 10 files
+Invalid: 1 files
+Exempt: 1 files
+
+Invalid files:
+  - bad-name.md (error: does not match pattern {repo}.feat.{feature}.{type}.{variant}.v{N}.md)
+
+Exempt files:
+  - README.md (exempt: documentation)
+
+Health: FAIL
+```
+
+When all files are valid:
+
+```
+Checking 10 markdown files...
+
+Valid: 10 files
+Invalid: 0 files
+Exempt: 0 files
+
+Health: OK
+```
+
+### With `--strict`
+
+Exempt files are counted as invalid. The "Exempt" line is hidden:
+
+```
+Checking 12 markdown files...
+
+Valid: 10 files
+Invalid: 2 files
+
+Invalid files:
+  - bad-name.md (error: does not match pattern {repo}.feat.{feature}.{type}.{variant}.v{N}.md)
+  - README.md (exempt: documentation)
+
+Health: FAIL
+```
+
+### With `--json`
+
+```json
+{
+  "checked": 12,
+  "valid": 10,
+  "invalid": 1,
+  "exempt": 1,
+  "strict": false,
+  "invalid_files": [
+    {
+      "file": "bad-name.md",
+      "detail": "error: does not match pattern {repo}.feat.{feature}.{type}.{variant}.v{N}.md"
+    }
+  ],
+  "exempt_files": [
+    {
+      "file": "README.md",
+      "detail": "exempt: documentation"
+    }
+  ]
+}
+```
+
+### With `--quiet`
+
+Only invalid files are printed (one per line). Nothing is printed if all files are valid.
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | All files valid |
+| `1` | One or more invalid files |
+| `2` | Filesystem error |

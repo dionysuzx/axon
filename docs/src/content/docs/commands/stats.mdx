@@ -1,0 +1,97 @@
+---
+title: axon stats
+description: Show statistics about prompt files in the current directory
+---
+
+Displays a breakdown of prompt files by repo, category, type, and variant.
+
+## Usage
+
+```bash
+axon stats [--json]
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output as JSON |
+
+## Examples
+
+### Default output
+
+```bash
+axon stats
+```
+
+```
+Files: 15 total (12 valid, 2 exempt, 1 invalid)
+
+By repo:
+  myapp:   10 files
+  toolkit:  2 files
+
+By category:
+  feat: 10 files
+  sop:   2 files
+
+By type:
+  prompt: 6 files
+  spec:   3 files
+  guide:  1 files
+
+By variant:
+  initial: 5 files
+  revised: 3 files
+  draft:   2 files
+```
+
+### JSON output
+
+```bash
+axon stats --json
+```
+
+```json
+{
+  "total": 15,
+  "valid": 12,
+  "exempt": 2,
+  "invalid": 1,
+  "by_repo": {
+    "myapp": 10,
+    "toolkit": 2
+  },
+  "by_category": {
+    "feat": 10,
+    "sop": 2
+  },
+  "by_type": {
+    "prompt": 6,
+    "spec": 3,
+    "guide": 1
+  },
+  "by_variant": {
+    "initial": 5,
+    "revised": 3,
+    "draft": 2
+  }
+}
+```
+
+## Breakdown Categories
+
+| Category | Description |
+|----------|-------------|
+| **By repo** | File count per `{repo}` segment |
+| **By category** | Count of `feat` vs `sop` files |
+| **By type** | File count per `{type}` segment (feat files only) |
+| **By variant** | File count per `{variant}` segment (feat files only) |
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `2` | Filesystem error |

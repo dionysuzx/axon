@@ -1,0 +1,123 @@
+---
+title: Pattern Syntax
+description: "{placeholder} syntax reference for refactor patterns"
+---
+
+The `axon refactor` command uses pattern syntax to match and transform filenames. This page documents the full syntax.
+
+## Basic Syntax
+
+Patterns are strings containing **literals** and **placeholders**:
+
+```
+{repo}.feat.{feature}.{type}.{variant}.v{N}.md
+```
+
+- **Literals**: exact text that must appear in the filename (e.g., `.feat.`, `.v`, `.md`)
+- **Placeholders**: `{name}` tokens that capture variable segments
+
+## Placeholder Types
+
+### Named Placeholders
+
+Named placeholders like `{repo}`, `{feature}`, `{type}`, `{variant}`, and `{name}` match segments that:
+
+- Start with a lowercase letter (`a-z`)
+- Continue with lowercase letters, digits, or hyphens
+- Regex: `[a-z][a-z0-9-]*`
+
+### Numeric Placeholder
+
+The special `{N}` placeholder matches version numbers:
+
+- Must be a positive integer (no leading zeros)
+- Regex: `[1-9]\d*`
+
+## Rules
+
+### File Extension
+
+If a pattern does not include `.md`, axon appends it automatically:
+
+```
+{repo}.feat.{feature}.{type}.{variant}.v{N}
+```
+
+is treated as:
+
+```
+{repo}.feat.{feature}.{type}.{variant}.v{N}.md
+```
+
+### Placeholder Matching
+
+Both the source and target patterns in a refactor must use the **exact same set of placeholders**. This ensures every captured value is used in the output:
+
+```bash
+# Works — same placeholders in both
+axon refactor \
+  --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+  --to "{repo}.feat.{feature}.{variant}.{type}.v{N}"
+
+# Fails — {type} and {variant} missing from target
+axon refactor \
+  --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+  --to "{repo}.feat.{feature}.v{N}"
+```
+
+### No Duplicates
+
+Each placeholder name can only appear once per pattern:
+
+```
+# Invalid — {repo} appears twice
+{repo}.feat.{repo}.v{N}.md
+```
+
+### No Nesting
+
+Placeholders cannot be nested:
+
+```
+# Invalid
+{outer{inner}}.md
+```
+
+### Reserved Characters
+
+The characters `{`, `}`, `[`, and `]` are reserved for pattern syntax. Unmatched brackets produce an error.
+
+## Examples
+
+### Swap type and variant
+
+```bash
+axon refactor \
+  --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+  --to "{repo}.feat.{feature}.{variant}.{type}.v{N}"
+```
+
+Given `myapp.feat.auth.prompt.initial.v1.md`, produces `myapp.feat.auth.initial.prompt.v1.md`.
+
+### Change separator style
+
+```bash
+axon refactor \
+  --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+  --to "{repo}-feat-{feature}-{type}-{variant}-v{N}"
+```
+
+Given `myapp.feat.auth.prompt.initial.v1.md`, produces `myapp-feat-auth-prompt-initial-v1.md`.
+
+### Convert feat to SOP-like structure
+
+This does **not** work because the placeholder sets differ:
+
+```bash
+# Fails — {type} and {variant} have no counterpart in target
+axon refactor \
+  --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+  --to "{repo}.sop.{feature}.v{N}"
+```
+
+You would need matching placeholders in both patterns.

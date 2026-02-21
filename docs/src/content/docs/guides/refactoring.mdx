@@ -1,0 +1,115 @@
+---
+title: Refactoring Workflows
+description: End-to-end workflows for renaming prompt files
+---
+
+This guide covers common refactoring workflows with `axon refactor`.
+
+## Dry-Run First
+
+Always preview changes before applying them:
+
+```bash
+axon refactor \
+  --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+  --to "{repo}.feat.{feature}.{variant}.{type}.v{N}" \
+  --dry-run
+```
+
+Review the full list of renames in the output. Only proceed when the preview looks correct.
+
+## Apply the Refactor
+
+Once satisfied with the dry run, remove `--dry-run`:
+
+```bash
+axon refactor \
+  --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+  --to "{repo}.feat.{feature}.{variant}.{type}.v{N}"
+```
+
+Axon will show a preview and ask for confirmation:
+
+```
+Proceed with git mv? [y/N]
+```
+
+## Handling Failures
+
+If a rename fails partway through, axon:
+
+1. Stops immediately
+2. Writes `.axon-rollback.json` with successful renames
+3. Writes `.axon-retry.json` with remaining renames
+4. Exits with code 4
+
+### Retry Failed Renames
+
+Fix the underlying issue (e.g., file permissions), then:
+
+```bash
+axon refactor --retry
+```
+
+This reads `.axon-retry.json` and attempts the remaining renames. The retry journal is deleted on success.
+
+### Rollback Successful Renames
+
+To undo the renames that did succeed:
+
+```bash
+axon refactor --rollback
+```
+
+This reads `.axon-rollback.json` and reverses each rename. The rollback journal is deleted on success.
+
+## Git Integration
+
+By default, axon auto-detects git and uses `git mv` inside a repository. This means renames are automatically staged.
+
+To force a specific method:
+
+```bash
+# Always use git mv (error if not in a git repo)
+axon refactor --from "..." --to "..." --git
+
+# Always use regular mv (even in a git repo)
+axon refactor --from "..." --to "..." --no-git
+```
+
+After a successful refactor with `git mv`, you can commit directly:
+
+```bash
+git commit -m "refactor: swap type and variant segments"
+```
+
+## Scripting with `--yes`
+
+For non-interactive use (scripts, CI), skip the confirmation prompt:
+
+```bash
+axon refactor \
+  --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+  --to "{repo}.feat.{feature}.{variant}.{type}.v{N}" \
+  --yes
+```
+
+Combine with `--dry-run` first in CI to validate without applying:
+
+```bash
+# Validate patterns match files
+axon refactor --from "..." --to "..." --dry-run
+
+# Apply if validation passed
+axon refactor --from "..." --to "..." --yes
+```
+
+## Overwriting Existing Files
+
+If a target filename already exists, axon aborts by default. Use `--force` to overwrite:
+
+```bash
+axon refactor --from "..." --to "..." --force
+```
+
+Use this with caution — overwritten files cannot be recovered (unless you're using git).

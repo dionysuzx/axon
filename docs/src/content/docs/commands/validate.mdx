@@ -1,0 +1,51 @@
+---
+title: axon validate
+description: Validate a single filename against the naming convention
+---
+
+Checks whether a single filename matches the feat or SOP pattern, or is an exempt file.
+
+## Usage
+
+```bash
+axon validate <filename>
+```
+
+## Examples
+
+### Valid filename
+
+```bash
+axon validate myapp.feat.auth.prompt.initial.v1.md
+```
+
+```
+Valid
+```
+
+### Exempt filename
+
+```bash
+axon validate README.md
+```
+
+```
+Valid (exempt: documentation)
+```
+
+### Invalid filename
+
+```bash
+axon validate bad-name.md
+```
+
+```
+Invalid: does not match pattern {repo}.feat.{feature}.{type}.{variant}.v{N}.md
+```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Valid or exempt |
+| `1` | Invalid filename |

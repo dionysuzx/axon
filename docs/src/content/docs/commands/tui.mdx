@@ -1,0 +1,82 @@
+---
+title: axon (TUI)
+description: Interactive terminal user interface
+---
+
+Running `axon` with no arguments launches the terminal UI for browsing and managing notes.
+
+## Usage
+
+```bash
+axon
+```
+
+## Prerequisites
+
+- [yazi](https://yazi-rs.github.io/) — terminal file manager, used to open notes
+- [fzf](https://github.com/junegunn/fzf) — fuzzy finder, used by `/` search
+
+## Keybindings
+
+| Key | Action |
+|-----|--------|
+| `j` / `Down` | Move selection down |
+| `k` / `Up` | Move selection up |
+| `Enter` | Open selected note in yazi |
+| `/` | Fuzzy search notes with fzf |
+| `d` | Open today's daily note |
+| `w` | Open this week's weekly note |
+| `m` | Open this month's monthly note |
+| `s` | Create and open a scratch note |
+| `q` | Quit |
+| `Ctrl+C` | Quit |
+
+## Behavior
+
+The TUI uses an alternate screen buffer, so your terminal history is preserved when you exit. The screen displays:
+
+- A centered **axon** title
+- A scrollable list of notes from your notes directory
+- A keybinding legend at the bottom
+
+### Note List
+
+The TUI lists all `.md` files in your notes directory (excluding `schema.*` files), sorted alphabetically. The selected note is highlighted in cyan. The list scrolls automatically to keep the selection visible.
+
+### Fuzzy Search
+
+Pressing `/` opens fzf with the current note list. You can:
+
+- **Select an existing note** — opens it in yazi
+- **Type a new name** — creates the note (with schema template if configured) and opens it in yazi
+
+### Note Shortcuts
+
+The `d`, `w`, `m`, and `s` keys create notes if they don't exist (applying schema templates from `axon.toml`) and open them in yazi:
+
+| Key | Filename Format | Example |
+|-----|----------------|---------|
+| `d` | `daily.YYYY.MM.DD.md` | `daily.2025.01.15.md` |
+| `w` | `weekly.YYYY.MM.DD.md` (Monday's date) | `weekly.2025.01.13.md` |
+| `m` | `monthly.YYYY.MM.md` | `monthly.2025.01.md` |
+| `s` | `scratch.{unix_timestamp}.md` | `scratch.1737000000.md` |
+
+After returning from yazi, the note list refreshes automatically.
+
+### Terminal Handling
+
+The TUI uses crossterm for terminal management:
+
+- Enables raw mode for keyboard input
+- Enters the alternate screen buffer
+- Hides the cursor
+- On exit (or before launching yazi/fzf), all terminal state is restored
+
+The screen redraws on terminal resize events.
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Normal exit |
+| `1` | Terminal error |

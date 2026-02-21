@@ -1,0 +1,43 @@
+---
+title: Axon
+description: Validate and refactor prompt filenames
+template: splash
+hero:
+  tagline: A Rust CLI for validating, parsing, and refactoring prompt filenames with structured naming conventions.
+  actions:
+    - text: Get Started
+      link: /getting-started/
+      icon: right-arrow
+      variant: primary
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Features
+
+<CardGrid stagger>
+  <Card title="Filename Validation" icon="approve-check">
+    Check that prompt files follow `{repo}.feat.{feature}.{type}.{variant}.v{N}.md` or `{repo}.sop.{name}.v{N}.md` conventions.
+  </Card>
+  <Card title="Bulk Refactoring" icon="pencil">
+    Rename files with pattern-based refactoring, dry-run previews, rollback, and git integration.
+  </Card>
+  <Card title="Notes" icon="document">
+    Create and open daily, weekly, monthly, and scratch notes with configurable schema templates.
+  </Card>
+  <Card title="Terminal UI" icon="laptop">
+    Browse notes, fuzzy search with fzf, and open files in yazi — all from an interactive TUI.
+  </Card>
+</CardGrid>
+
+## Quick Install
+
+```bash
+cargo install --path .
+```
+
+## Quick Health Check
+
+```bash
+axon health
+```

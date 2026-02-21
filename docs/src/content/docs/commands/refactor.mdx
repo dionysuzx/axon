@@ -1,0 +1,139 @@
+---
+title: axon refactor
+description: Bulk-rename prompt files using pattern-based refactoring
+---
+
+Renames prompt files by matching a source pattern and applying a target pattern. Supports dry-run previews, git integration, and rollback.
+
+## Usage
+
+```bash
+axon refactor [--from <pattern>] [--to <pattern>] [flags]
+```
+
+If `--from` and `--to` are omitted, axon enters **interactive mode** and prompts for patterns.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--from <pattern>` | Source pattern to match filenames against |
+| `--to <pattern>` | Target pattern to rename files to |
+| `--dry-run` | Show what would be renamed without making changes |
+| `--yes` | Skip the confirmation prompt |
+| `--git` | Force `git mv` for renames (error if not in a git repo) |
+| `--no-git` | Force regular `mv` even inside a git repo |
+| `--force` | Overwrite existing target files |
+| `--retry` | Retry previously failed renames from `.axon-retry.json` |
+| `--rollback` | Reverse the last refactor using `.axon-rollback.json` |
+
+### Flag Conflicts
+
+- `--git` and `--no-git` cannot be used together
+- `--retry` cannot be used with `--from`, `--to`, or `--rollback`
+- `--rollback` cannot be used with `--from`, `--to`, or `--retry`
+
+## Interactive Mode
+
+When `--from` and `--to` are omitted, axon prompts interactively:
+
+```
+Enter source pattern (or press Enter for current): {repo}.feat.{feature}.{type}.{variant}.v{N}
+Enter target pattern: {repo}.feat.{feature}.{type}.{variant}.v{N}
+```
+
+The default source pattern is the current canonical pattern: `{repo}.feat.{feature}.{type}.{variant}.v{N}`.
+
+## Pattern Matching
+
+Both `--from` and `--to` use `{placeholder}` syntax. The `.md` extension is appended automatically if omitted.
+
+Both patterns must contain the **exact same set of placeholders**. If they don't match, axon reports the mismatch:
+
+```
+Error: Placeholder mismatch between patterns
+  - Source has: {N}, {feature}, {repo}, {type}, {variant}
+  - Target has: {N}, {feature}, {repo}
+  - Missing in target: {type}, {variant}
+
+Both patterns must use the same placeholders.
+```
+
+## Safety Checks
+
+Before renaming, axon verifies:
+
+1. **No duplicate targets** — two source files cannot map to the same target name (exit code 3)
+2. **No existing targets** — target filenames must not already exist on disk, unless `--force` is used (exit code 3)
+3. **Exempt files are skipped** — files like `README.md` are never renamed
+
+## Dry Run
+
+Use `--dry-run` to preview all renames without making changes:
+
+```bash
+axon refactor --from "{repo}.feat.{feature}.{type}.{variant}.v{N}" \
+              --to "{repo}.feat.{feature}.{variant}.{type}.v{N}" \
+              --dry-run
+```
+
+```
+Analyzing 15 files...
+
+Matched: 12 files
+Skipped: 2 files (exempt)
+Skipped: 1 files (non-matching)
+
+Preview:
+
+  myapp.feat.auth.prompt.initial.v1.md
+    -> myapp.feat.auth.initial.prompt.v1.md
+
+  myapp.feat.auth.prompt.revised.v2.md
+    -> myapp.feat.auth.revised.prompt.v2.md
+
+  myapp.feat.login.spec.draft.v1.md
+    -> myapp.feat.login.draft.spec.v1.md
+
+  ... and 9 more
+
+Dry run (no changes made):
+
+  myapp.feat.auth.prompt.initial.v1.md
+    -> myapp.feat.auth.initial.prompt.v1.md
+
+  myapp.feat.auth.prompt.revised.v2.md
+    -> myapp.feat.auth.revised.prompt.v2.md
+  ...
+```
+
+## Git Integration
+
+By default, axon auto-detects whether you're in a git repository:
+
+- **In a git repo**: uses `git mv` for renames
+- **Not in a git repo**: uses regular `mv`
+
+Use `--git` to force `git mv` or `--no-git` to force regular `mv`.
+
+## Journal Files
+
+After a refactor, axon writes journal files for recovery:
+
+| File | Purpose |
+|------|---------|
+| `.axon-rollback.json` | Records all successful renames (for `--rollback`) |
+| `.axon-retry.json` | Records remaining renames after a failure (for `--retry`) |
+
+The retry journal is automatically deleted after a fully successful refactor.
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | All renames successful |
+| `1` | No matching files found |
+| `2` | Invalid pattern or arguments |
+| `3` | Duplicate or conflicting target filenames |
+| `4` | Partial failure (some renames succeeded, some failed) |
+| `5` | Filesystem or git error |
