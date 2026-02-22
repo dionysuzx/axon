@@ -8,6 +8,8 @@ use crossterm::{
     ExecutableCommand, QueueableCommand,
 };
 
+use std::collections::BTreeMap;
+
 use crate::notes;
 
 pub fn run() -> Result<(), crate::error::CliError> {
@@ -84,15 +86,17 @@ fn enter_tui() -> io::Result<()> {
 }
 
 /// Suspend our TUI state, run a closure, restore.
-/// Stays on the alternate screen to avoid flicker — child programs
-/// (fzf, yazi) manage their own alternate screen internally.
+/// Leaves the alternate screen so child programs (editors, fzf, yazi)
+/// that manage their own alternate screen don't clobber ours.
 fn shell_out(stdout: &mut io::Stdout, f: impl FnOnce()) -> io::Result<()> {
     stdout.execute(cursor::Show)?;
+    stdout.execute(terminal::LeaveAlternateScreen)?;
     terminal::disable_raw_mode()?;
 
     f();
 
     terminal::enable_raw_mode()?;
+    stdout.execute(terminal::EnterAlternateScreen)?;
     stdout.execute(cursor::Hide)?;
     Ok(())
 }
@@ -219,6 +223,20 @@ fn event_loop(stdout: &mut io::Stdout) -> io::Result<()> {
                 refresh_after_shell(stdout, &mut files, &mut selected)?;
             }
 
+            // New note with schema
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('n'),
+                modifiers,
+                ..
+            }) if !modifiers.contains(KeyModifiers::CONTROL) => {
+                if let Some(name) = prompt_new_note(stdout)? {
+                    shell_out(stdout, || {
+                        let _ = notes::create_and_open_note(&name);
+                    })?;
+                }
+                refresh_after_shell(stdout, &mut files, &mut selected)?;
+            }
+
             Event::Resize(_, _) => {
                 draw_screen(stdout, &files, selected)?;
             }
@@ -226,6 +244,107 @@ fn event_loop(stdout: &mut io::Stdout) -> io::Result<()> {
         }
     }
 
+    Ok(())
+}
+
+fn prompt_new_note(stdout: &mut io::Stdout) -> io::Result<Option<String>> {
+    let dir = notes::notes_dir();
+    let cfg = crate::config::load_config(&dir);
+    let mut input = String::new();
+
+    stdout.execute(cursor::Show)?;
+    draw_new_note_screen(stdout, &cfg.schemas, &input)?;
+
+    loop {
+        match event::read()? {
+            Event::Key(KeyEvent { code: KeyCode::Esc, .. }) => {
+                stdout.execute(cursor::Hide)?;
+                return Ok(None);
+            }
+            Event::Key(KeyEvent { code: KeyCode::Enter, .. }) => {
+                stdout.execute(cursor::Hide)?;
+                let trimmed = input.trim().to_string();
+                if trimmed.is_empty() {
+                    return Ok(None);
+                }
+                return Ok(Some(trimmed));
+            }
+            Event::Key(KeyEvent { code: KeyCode::Backspace, .. }) => {
+                input.pop();
+                draw_new_note_screen(stdout, &cfg.schemas, &input)?;
+            }
+            Event::Key(KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers,
+                ..
+            }) if !modifiers.contains(KeyModifiers::CONTROL) => {
+                input.push(c);
+                draw_new_note_screen(stdout, &cfg.schemas, &input)?;
+            }
+            Event::Resize(_, _) => {
+                draw_new_note_screen(stdout, &cfg.schemas, &input)?;
+            }
+            _ => {}
+        }
+    }
+}
+
+fn draw_new_note_screen(
+    stdout: &mut io::Stdout,
+    schemas: &BTreeMap<String, String>,
+    input: &str,
+) -> io::Result<()> {
+    let (cols, rows) = terminal::size()?;
+
+    stdout.queue(terminal::Clear(ClearType::All))?;
+
+    // Title
+    let title = "new note";
+    let title_col = cols.saturating_sub(title.len() as u16) / 2;
+    stdout.queue(cursor::MoveTo(title_col, 1))?;
+    stdout.queue(style::PrintStyledContent(title.bold()))?;
+
+    // Schema list
+    let mut row: u16 = 3;
+    stdout.queue(cursor::MoveTo(4, row))?;
+    stdout.queue(style::PrintStyledContent("schemas".dark_grey()))?;
+    row += 1;
+
+    if schemas.is_empty() {
+        stdout.queue(cursor::MoveTo(4, row))?;
+        stdout.queue(style::PrintStyledContent(
+            "(none configured in axon.toml)".dark_grey(),
+        ))?;
+    } else {
+        for (pattern, template) in schemas {
+            stdout.queue(cursor::MoveTo(4, row))?;
+            stdout.queue(style::PrintStyledContent(pattern.as_str().cyan()))?;
+            stdout.queue(style::PrintStyledContent(" -> ".dark_grey()))?;
+            stdout.queue(style::PrintStyledContent(template.as_str().stylize()))?;
+            row += 1;
+        }
+    }
+
+    // Input prompt
+    let prompt_row = rows.saturating_sub(3);
+    let prompt = "filename: ";
+    stdout.queue(cursor::MoveTo(4, prompt_row))?;
+    stdout.queue(style::PrintStyledContent(prompt.bold()))?;
+    stdout.queue(style::PrintStyledContent(input.stylize()))?;
+
+    // Position cursor at end of input
+    let cursor_col = 4 + prompt.len() as u16 + input.len() as u16;
+    stdout.queue(cursor::MoveTo(cursor_col, prompt_row))?;
+
+    // Hint
+    let hint_row = rows.saturating_sub(2);
+    stdout.queue(cursor::MoveTo(4, hint_row))?;
+    stdout.queue(style::PrintStyledContent("enter".bold().cyan()))?;
+    stdout.queue(style::PrintStyledContent(" create  ".stylize()))?;
+    stdout.queue(style::PrintStyledContent("esc".bold().cyan()))?;
+    stdout.queue(style::PrintStyledContent(" cancel".stylize()))?;
+
+    stdout.flush()?;
     Ok(())
 }
 
@@ -294,6 +413,8 @@ fn draw_screen(
     stdout.queue(style::PrintStyledContent(" monthly  ".stylize()))?;
     stdout.queue(style::PrintStyledContent("s".bold().cyan()))?;
     stdout.queue(style::PrintStyledContent(" scratch  ".stylize()))?;
+    stdout.queue(style::PrintStyledContent("n".bold().cyan()))?;
+    stdout.queue(style::PrintStyledContent(" new  ".stylize()))?;
     stdout.queue(style::PrintStyledContent("q".bold().cyan()))?;
     stdout.queue(style::PrintStyledContent(" quit".stylize()))?;
 

@@ -18,6 +18,11 @@ enum Commands {
 Stats(commands::stats::StatsArgs),
     /// Open today's daily notes directory in yazi
     D,
+    /// Create a new note with schema applied
+    N {
+        /// Filename for the new note (e.g. weekly.2026.03.02.md)
+        filename: String,
+    },
 }
 
 fn main() {
@@ -31,6 +36,10 @@ fn main() {
         Some(Commands::D) => axon::notes::open_daily().map_err(|e| axon::error::CliError {
             code: 1,
             message: format!("daily note error: {e}"),
+        }),
+        Some(Commands::N { filename }) => axon::notes::create_and_open_note(&filename).map_err(|e| axon::error::CliError {
+            code: 1,
+            message: format!("note error: {e}"),
         }),
         None => axon::tui::run(),
     };
