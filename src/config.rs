@@ -25,7 +25,16 @@ impl Config {
             .find(|(pattern, _)| glob_match(pattern, filename))
             .map(|(_, schema)| schema)?;
 
-        fs::read_to_string(notes_dir.join(schema_file)).ok()
+        let content = fs::read_to_string(notes_dir.join(schema_file)).ok()?;
+
+        // Extract date from filename: "weekly.2026.02.23.md" -> "2026.02.23"
+        let date = filename
+            .strip_suffix(".md")
+            .and_then(|s| s.split_once('.'))
+            .map(|(_, d)| d)
+            .unwrap_or("");
+
+        Some(content.replace("{{date}}", date))
     }
 }
 

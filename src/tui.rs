@@ -237,6 +237,42 @@ fn event_loop(stdout: &mut io::Stdout) -> io::Result<()> {
                 refresh_after_shell(stdout, &mut files, &mut selected)?;
             }
 
+            // Prompts menu
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('p'),
+                modifiers,
+                ..
+            }) if !modifiers.contains(KeyModifiers::CONTROL) => {
+                let prompt_files = crate::prompts::list_prompts();
+                let mut fzf_list = vec![crate::prompts::OPEN_SESSION.to_string()];
+                fzf_list.extend(prompt_files.clone());
+                let pick = {
+                    let mut result = None;
+                    shell_out(stdout, || {
+                        result = fzf_pick(&fzf_list).ok().flatten();
+                    })?;
+                    result
+                };
+
+                if let Some(name) = pick {
+                    if name == crate::prompts::OPEN_SESSION {
+                        shell_out(stdout, || {
+                            let _ = crate::prompts::open_claude_session();
+                        })?;
+                    } else if prompt_files.contains(&name) {
+                        shell_out(stdout, || {
+                            let _ = crate::prompts::run_prompt_with_claude(&name);
+                        })?;
+                    } else {
+                        shell_out(stdout, || {
+                            let _ = crate::prompts::create_and_open_prompt(&name);
+                        })?;
+                    }
+                }
+
+                refresh_after_shell(stdout, &mut files, &mut selected)?;
+            }
+
             Event::Resize(_, _) => {
                 draw_screen(stdout, &files, selected)?;
             }
@@ -415,6 +451,8 @@ fn draw_screen(
     stdout.queue(style::PrintStyledContent(" scratch  ".stylize()))?;
     stdout.queue(style::PrintStyledContent("n".bold().cyan()))?;
     stdout.queue(style::PrintStyledContent(" new  ".stylize()))?;
+    stdout.queue(style::PrintStyledContent("p".bold().cyan()))?;
+    stdout.queue(style::PrintStyledContent(" prompts  ".stylize()))?;
     stdout.queue(style::PrintStyledContent("q".bold().cyan()))?;
     stdout.queue(style::PrintStyledContent(" quit".stylize()))?;
 

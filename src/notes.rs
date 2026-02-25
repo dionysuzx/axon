@@ -7,16 +7,8 @@ use chrono::{Datelike, Local};
 use crate::config;
 
 pub fn notes_dir() -> PathBuf {
-    if let Ok(dir) = std::env::var("AXON_NOTES_DIR") {
-        return PathBuf::from(dir);
-    }
-    dirs_home().join("notes")
-}
-
-fn dirs_home() -> PathBuf {
-    std::env::var("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("."))
+    let cfg = crate::global_config::load();
+    cfg.notes_dir()
 }
 
 pub fn open_daily() -> std::io::Result<()> {
